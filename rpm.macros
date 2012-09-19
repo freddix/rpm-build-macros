@@ -952,13 +952,12 @@ fi \
 %py_ver			%{expand:%%global py_ver %(%{__python} -c "import sys; print sys.version[:3]" 2>/dev/null || echo ERROR)}%py_ver
 
 # directories
-%py_prefix		%{expand:%%global py_prefix %(%{__python} -c "import sys; print sys.prefix" 2>/dev/null || echo ERROR)}%py_prefix
-%py_libdir		%{py_prefix}/%{_lib}/python%{py_ver}
-%py_scriptdir	%{py_prefix}/share/python%{py_ver}
-%py_incdir		/usr/include/python%{py_ver}
-%py_sitedir		%{py_libdir}/site-packages
-%py_sitescriptdir %{py_scriptdir}/site-packages
 %py_dyndir		%{py_libdir}/lib-dynload
+%py_incdir		/usr/include/python%{py_ver}
+%py_libdir		%{_libdir}/python%{py_ver}
+%py_scriptdir		%{_libdir}/python%{py_ver}
+%py_sitedir		%{py_libdir}/site-packages
+%py_sitescriptdir	%{py_scriptdir}/site-packages
 
 # pure python modules compilation
 %py_comp		python -c "import compileall; import sys; compileall.compile_dir(sys.argv[1], ddir=sys.argv[1][len('$RPM_BUILD_ROOT'):])"
@@ -978,13 +977,12 @@ fi \
 %py3_libdir		%{expand:%%global py3_libdir %(%{__python3} -c "import sysconfig; print(sysconfig.get_path('platstdlib'))" 2>/dev/null || echo ERROR)}%py3_libdir
 %py3_incdir		%{expand:%%global py3_incdir %(%{__python3} -c "import sysconfig; print(sysconfig.get_path('include'))" 2>/dev/null || echo ERROR)}%py3_incdir
 %py3_sitedir		%{expand:%%global py3_sitedir %(%{__python3} -c "import sysconfig; print(sysconfig.get_path('platlib'))" 2>/dev/null || echo ERROR)}%py3_sitedir
-%py3_sitescriptdir		%{expand:%%global py3_sitescriptdir %(%{__python3} -c "import sysconfig; print(sysconfig.get_path('purelib'))" 2>/dev/null || echo ERROR)}%py3_sitescriptdir
-%py3_scriptdir	%{py3_prefix}/share/python%{py3_ver}
+%py3_sitescriptdir	%{expand:%%global py3_sitescriptdir %(%{__python3} -c "import sysconfig; print(sysconfig.get_path('purelib'))" 2>/dev/null || echo ERROR)}%py3_sitescriptdir
+%py3_scriptdir		%{py3_prefix}/share/python%{py3_ver}
 %py3_dyndir		%{py3_libdir}/lib-dynload
 
 # pure python modules compilation
 %py3_comp		%{__python3} -c "import compileall; import sys; compileall.compile_dir(sys.argv[1], ddir=sys.argv[1][len('$RPM_BUILD_ROOT'):])"
-
 %py3_ocomp		%{__python3} -O -c "import compileall; import sys; compileall.compile_dir(sys.argv[1], ddir=sys.argv[1][len('$RPM_BUILD_ROOT'):])"
 
 # Hardlink binary identical .pyc and .pyo files
