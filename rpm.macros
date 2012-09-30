@@ -955,8 +955,8 @@ fi \
 %py_dyndir		%{py_libdir}/lib-dynload
 %py_incdir		/usr/include/python%{py_ver}
 %py_libdir		%{_libdir}/python%{py_ver}
-%py_scriptdir		%{_libdir}/python%{py_ver}
 %py_sitedir		%{py_libdir}/site-packages
+%py_scriptdir		%{_prefix}/lib/python%{py_ver}
 %py_sitescriptdir	%{py_scriptdir}/site-packages
 
 # pure python modules compilation
