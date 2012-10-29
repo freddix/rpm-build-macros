@@ -508,7 +508,9 @@ CXXFLAGS="%{rpmcxxflags}" \
 					# full paths that do not resolve symlink \
 					l=${l#/usr/share/man/}; \
 				else \
-					l=$m; \
+					l=${a#$RPM_BUILD_ROOT$i/}; \
+					l=${l%/*}; \
+					l="$l/$m"; \
 				fi; \
 				rm -f $a; \
 				echo ".so $l" > $a; \
@@ -976,8 +978,8 @@ fi \
 %py3_libdir		%{expand:%%global py3_libdir %(%{__python3} -c "import sysconfig; print(sysconfig.get_path('platstdlib'))" 2>/dev/null || echo ERROR)}%py3_libdir
 %py3_incdir		%{expand:%%global py3_incdir %(%{__python3} -c "import sysconfig; print(sysconfig.get_path('include'))" 2>/dev/null || echo ERROR)}%py3_incdir
 %py3_sitedir		%{expand:%%global py3_sitedir %(%{__python3} -c "import sysconfig; print(sysconfig.get_path('platlib'))" 2>/dev/null || echo ERROR)}%py3_sitedir
-%py3_sitescriptdir	%{expand:%%global py3_sitescriptdir %(%{__python3} -c "import sysconfig; print(sysconfig.get_path('purelib'))" 2>/dev/null || echo ERROR)}%py3_sitescriptdir
-%py3_scriptdir		%{py3_prefix}/share/python%{py3_ver}
+%py3_sitescriptdir		%{expand:%%global py3_sitescriptdir %(%{__python3} -c "import sysconfig; print(sysconfig.get_path('purelib'))" 2>/dev/null || echo ERROR)}%py3_sitescriptdir
+%py3_scriptdir	%{py3_prefix}/share/python%{py3_ver}
 %py3_dyndir		%{py3_libdir}/lib-dynload
 
 # pure python modules compilation
@@ -1700,6 +1702,17 @@ compile %{*}\
 																	\
 __install_kernel_modules() {										\
 %{!?debug:set +x;} \
+																	\
+for MODULE in {%{-m*},}; do											\
+	[ -n "${MODULE}" ] || continue									\
+	MNAME=${MODULE##*/}											\
+	install -D ${MODULE}.ko %{KernelD}/%{-d*}/${MNAME}%{-s:-%{-s*}}.ko	\
+	%{?-s:install -d %{ModprobeD}							\
+		echo "alias ${MNAME} ${MNAME}-%{-s*}" >> %{ModprobeD}/%{-n*}.conf}	\
+done																\
+}																	\
+__install_kernel_modules_old() {									\
+%{!?debug:set +x;} \
 local cfgs='%{?with_dist_kernel:%{?with_smp: smp}%{?with_up: up}}%{!?with_dist_kernel: nondist}' \
 																	\
 for MODULE in {%{-m*},}; do											\
@@ -1715,7 +1728,11 @@ for MODULE in {%{-m*},}; do											\
 	done															\
 done																\
 }																	\
-__install_kernel_modules											\
+if [ -r "%{_kernelsrcdir}/.config" ]; then	\
+	__install_kernel_modules				\
+else										\
+	__install_kernel_modules_old			\
+fi											\
 %{nil}
 
 # patchset macros
