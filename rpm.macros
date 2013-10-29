@@ -1,11 +1,11 @@
+# vim:ts=4 sw=4 noet ft=spec
+#
 # Freddix rpm macros
+# <http://freddix.org>
 
 %epoch		0
 %x8664		x86_64 amd64 ia32e
-
-# kernel compiler
-%kgcc		%{__cc}
-%kgcc_package	gcc
+%arm		armv3l armv4b armv4l armv5teb armv5tel
 
 # compiler version
 %cc_version	%{expand:%%global cc_version %(%{__cc} -dumpversion || echo ERROR)}%cc_version
@@ -78,15 +78,15 @@
 
 # if %{_topdir}/SPECS exists, it's old style structure
 %_specdir       %{expand:%%global _specdir %([ ! -d %{_topdir}/SPECS ] && echo %{_topdir}/%{name} || echo %{_topdir}/SPECS)}%_specdir
-%_sourcedir	%{expand:%%global _sourcedir %([ ! -d %{_topdir}/SOURCES ] && echo %{_specdir} || echo %{_topdir}/SOURCES)}%_sourcedir
+%_sourcedir		%{expand:%%global _sourcedir %([ ! -d %{_topdir}/SOURCES ] && echo %{_specdir} || echo %{_topdir}/SOURCES)}%_sourcedir
 
 # BUILD/RPMS/SRPMS are one same level by default as packages dir, if these exist
 # if they don't exist assume we are having custom topdir (which is not named as
 # "packages", i.e ~/rpm/kde/{kdelibs,BUILD/RPMS/SRPMS})
 # NOTE: readlink fails if some parent dir is not readable (/home/services/builder for example can't read /home/services), therfore the extra echo
-%_builddir	%{expand:%%global _builddir %(if [ -d %{_topdir}/BUILD ]; then echo %{_topdir}/BUILD; else readlink -m %{_topdir}/../BUILD || echo %{_topdir}/../BUILD; fi)}%_builddir
-%_rpmdir	%{expand:%%global _rpmdir %(if [ -d %{_topdir}/RPMS ]; then echo %{_topdir}/RPMS; else readlink -m %{_topdir}/../RPMS || echo readlink -m %{_topdir}/../RPMS; fi)}%_rpmdir
-%_srcrpmdir	%{expand:%%global _srcrpmdir %(if [ -d %{_topdir}/SRPMS ]; then echo %{_topdir}/SRPMS; else readlink -m %{_topdir}/../SRPMS || echo readlink -m %{_topdir}/../SRPMS; fi)}%_srcrpmdir
+%_builddir		%{expand:%%global _builddir %(if [ -d %{_topdir}/BUILD ]; then echo %{_topdir}/BUILD; else readlink -m %{_topdir}/../BUILD || echo %{_topdir}/../BUILD; fi)}%_builddir
+%_rpmdir		%{expand:%%global _rpmdir %(if [ -d %{_topdir}/RPMS ]; then echo %{_topdir}/RPMS; else readlink -m %{_topdir}/../RPMS || echo readlink -m %{_topdir}/../RPMS; fi)}%_rpmdir
+%_srcrpmdir		%{expand:%%global _srcrpmdir %(if [ -d %{_topdir}/SRPMS ]; then echo %{_topdir}/SRPMS; else readlink -m %{_topdir}/../SRPMS || echo readlink -m %{_topdir}/../SRPMS; fi)}%_srcrpmdir
 
 #	The number of cvs changelog entries kept when building package.
 %_buildchangelogtruncate 20
@@ -118,8 +118,8 @@
 # Regular expressions are supported, but to avoid some character be treated
 # as regular expression it must be escaped twice.
 
-%filter_out 						\
-	for (i = 1; i in I; i++) { 	A=0;	\
+%filter_out							\
+	for (i = 1; i in I; i++) { A=0;	\
 		for (f in F) {				\
 			if (I[i] ~ "^" F[f] "$") A=1;	\
 		};							\
@@ -177,8 +177,8 @@
 %_preserve_env_base	PATH HOME TMP TMPDIR SSH_AUTH_SOCK
 
 # "env -i" must end in first line of expaned macros because it's used as first line of shell script (#! env...)
-%_clean_env		%{!?_preserve_env:%global _preserve_env %{nil}}%{expand:%%global _preserve_env %{_preserve_env} %_preserve_env_base} env -i %(awk -vq="'" -vqq="\\"'\\"" -vq2q="'\\"'" 'BEGIN {
-	split("%{?_preserve_env}", P);
+%_clean_env env -i %(awk -vq="'" -vqq="\\"'\\"" -vq2q="'\\"'" 'BEGIN {
+	split("%{?_preserve_env:%_preserve_env %_preserve_env_base}%{!?_preserve_env:%_preserve_env_base}", P);
 	for (i in P) {
 		p = P[i];
 		if (!ENVIRON[p] || d[p]) {
@@ -216,7 +216,7 @@
  %{?__cxx:CXX="%{__cxx}" ; export CXX ; } \
  %{?configuredir:%{configuredir}}%{!?configuredir:.}/configure \
 	--host=%{_target_platform} \
- 	--prefix=%{_prefix} \
+	--prefix=%{_prefix} \
 	--exec-prefix=%{_exec_prefix} \
 	--bindir=%{_bindir} \
 	--sbindir=%{_sbindir} \
@@ -234,8 +234,8 @@
 }
 
 %cmake \
-%{?__cc:CC="%{__cc}"} \\\
-%{?__cxx:CXX="%{__cxx}"} \\\
+%{?__cc:CC="${CC:-%{__cc}}"} \\\
+%{?__cxx:CXX="${CXX:-%{__cxx}}"} \\\
 CPPFLAGS="${CPPFLAGS:-%{rpmcppflags}}" \\\
 %{__cmake} \\\
 	-DCMAKE_VERBOSE_MAKEFILE=ON \\\
@@ -286,7 +286,7 @@ CXXFLAGS="%{rpmcxxflags}" \
 %configure_cache_file	%{buildroot}.configure.cache
 
 %configure {./configure \
- 	LDFLAGS="${LDFLAGS:-%rpmldflags}" \
+	LDFLAGS="${LDFLAGS:-%rpmldflags}" \
 	CFLAGS="${CFLAGS:-%rpmcflags}" \
 	CXXFLAGS="${CXXFLAGS:-%rpmcxxflags}" \
 	FFLAGS="${FFLAGS:-%rpmcflags}" \
@@ -296,7 +296,7 @@ CXXFLAGS="%{rpmcxxflags}" \
 	%{?__cxx:CXX="%{__cxx}"} \
 	--host=%{_target_platform} \
 	--build=%{_target_platform} \
- 	--prefix=%{_prefix} \
+	--prefix=%{_prefix} \
 	--exec-prefix=%{_exec_prefix} \
 	--bindir=%{_bindir} \
 	--sbindir=%{_sbindir} \
@@ -391,16 +391,10 @@ CXXFLAGS="%{rpmcxxflags}" \
 %_gacdir	/usr/lib/mono/gac
 
 # Current date
-%date 		%(LC_ALL=C date +"%a %b %d %Y")
+%date		%(LC_ALL=C date +"%a %b %d %Y")
 
 # Example files, programs, scripts...
 %_examplesdir	/usr/src/examples
-
-# Alternative kernel type/version
-%_alt_kernel	%{nil}%{?alt_kernel:-%{?alt_kernel}}
-
-# The directory holding Linux kernel sources
-%_kernelsrcdir	/usr/src/linux%{_alt_kernel}
 
 # SysV-style initscripts dir
 %_initddir		/etc/rc.d/init.d
@@ -417,15 +411,40 @@ CXXFLAGS="%{rpmcxxflags}" \
 # and release 0.zzz.bootstrap if built with bootstrap
 %bootstrap_release() %{!?with_bootstrap:%{1}%{?2:.%{2}}}%{?with_bootstrap:%{!?2:%(expr %{1} - 1)}%{?2:%{1}.%(expr %{2} - 1)}.zzz.bootstrap}
 
+# Alternative kernel type/version
+%_alt_kernel	%{nil}%{?alt_kernel:-%{?alt_kernel}}
+
+# The directory holding Linux kernel sources
+%_kernelsrcdir	/usr/src/linux%{_alt_kernel}
+
+# rpm -qf on kernel version.h file
+%__kernel_qf()		%(R=$(cd %{_kernelsrcdir} 2>/dev/null && LC_ALL=C rpm -q --qf '%*' -f include/linux/version.h 2>/dev/null | grep -v 'is not'); echo ${R:-ERROR})
+
+# kernel %{name} and kernel %{epoch}:%{version}-%{release} macro respecing alt_kernel
+%kernel_name	%(N=%{__kernel_qf %{N}}; echo ${N%%-headers})
+%kernel_version	%{__kernel_qf %|E?{%{E}:}|%{V}-%{R}}
+
 # -n drm to generate kernel%{_alt_kernel}-drm dependency
-%releq_kernel(n:)		%{expand:%%global releq_kernel %(R=$(LC_ALL=C rpm -q --qf '%{N}%{?-n:-%{-n*}} = %|E?{%{E}:}|%{V}-%{R}' -f %{_kernelsrcdir}/include/linux/version.h 2>/dev/null | grep -v 'is not' | sed -e 's:-headers::;s:-config::'); echo ${R:-ERROR})}%releq_kernel
-%releq_kernel_up(n:)	%{expand:%%global releq_kernel_up %(R=$(LC_ALL=C rpm -q --qf '%{N}%{?-n:-%{-n*}}-up = %|E?{%{E}:}|%{V}-%{R}' -f %{_kernelsrcdir}/include/linux/version.h 2>/dev/null | grep -v 'is not' | sed -e 's:-headers::;s:-config::'); echo ${R:-ERROR})}%releq_kernel_up
-%releq_kernel_smp(n:)	%{expand:%%global releq_kernel_smp %(R=$(LC_ALL=C rpm -q --qf '%{N}%{?-n:-%{-n*}}-smp = %|E?{%{E}:}|%{V}-%{R}' -f %{_kernelsrcdir}/include/linux/version.h 2>/dev/null | grep -v 'is not' | sed -e 's:-headers::;s:-config::'); echo ${R:-ERROR})}%releq_kernel_smp
+%releq_kernel(n:)		%{kernel_name}%{?-n:-%{-n*}} = %{kernel_version}
+%releq_kernel_up(n:)	%{kernel_name}-up%{?-n:-%{-n*}} = %{kernel_version}
+%releq_kernel_smp(n:)	%{kernel_name}-smp%{?-n:-%{-n*}} = %{kernel_version}
 
 # -s post to generate Requires(post) dependency
 %requires_releq_kernel(s:n:)		Requires%{-s:(%{-s*})}: %releq_kernel
 %requires_releq_kernel_up(s:n:)		Requires%{-s:(%{-s*})}: %releq_kernel_up
 %requires_releq_kernel_smp(s:n:)	Requires%{-s:(%{-s*})}: %releq_kernel_smp
+
+# kernel version-release handling
+%__kernel_ver	 %( \\
+	Z=$([ -f '%{_kernelsrcdir}/include/generated/utsrelease.h' ] && awk -F'"' '/UTS_RELEASE/{print $2}' %{_kernelsrcdir}/include/{linux/version,generated/utsrelease}.h 2>/dev/null || awk -F'"' '/UTS_RELEASE/{print $2}' %{_kernelsrcdir}/include/linux/{version,utsrelease}.h 2>/dev/null); \\
+	Z=${Z:-$(awk -F' = ' '/^VERSION/{v=$2} /^PATCHLEVEL/{p=$2} /^SUBLEVEL/{s=$2} /^EXTRAVERSION/{e=$2} END {printf("%d.%d.%d%s", v, p, s, e)}' %{_kernelsrcdir}/Makefile 2>/dev/null)}; \\
+	echo ${Z:-ERROR}; \\
+)
+
+# `uname -r` used for building/installing kernel modules
+%_kernel_ver	%{__kernel_ver}%{!?_without_dist_kernel:%(echo %{__kernel_ver} | grep -q -e - || echo -%{__kernel_qf %{R}})}
+# package version OR `uname -r` for non-dist kernel to be used in @release field
+%_kernel_ver_str %(echo %{!?_without_dist_kernel:%{__kernel_qf %{V}-%{R}}}%{?_without_dist_kernel:%{__kernel_ver}} | tr '-' '_')
 
 # Requires name = version-release
 %requires_releq()	%{!?1:ERROR}%{?2:ERROR}%{?1:%{!?2:%{expand:%%requires_eq_to -r %1 %1}}}
@@ -439,22 +458,13 @@ CXXFLAGS="%{rpmcxxflags}" \
 # Requires: name >= version (version based on querying package %2)
 %requires_ge_to(r)	%{!?2:ERROR}%{?3:ERROR}%{?2:%{!?3:%(if ! LC_ALL=C rpm -q --qf 'Requires: %1 >= %|E?{%{E}:}|%{V}%{?-r:-%{R}}\\n' %2 | grep '^Requires:'; then echo "BuildRequires: %2"; fi)}}
 
+# helper for renaming packages
+# %rename old-package
+%rename() \
+Obsoletes: %{1} < %{?epoch:%{epoch}:}%{?version:%{version}}%{?release:-%{release}} \
+Provides: %{1} = %{?epoch:%{epoch}:}%{?version:%{version}}%{?release:-%{release}}
+
 %apache_modules_api %{expand:%%global apache_modules_api %(awk '/#define MODULE_MAGIC_NUMBER_MAJOR/ {print $3}' /usr/include/apache/ap_mmn.h 2>/dev/null || echo ERROR)}%apache_modules_api
-
-# kernel version-release handling
-%__kernel_ver	 %{expand:%%global __kernel_ver %( \\
-	Z=$([ -f '%{_kernelsrcdir}/include/generated/utsrelease.h' ] && awk -F'"' '/UTS_RELEASE/{print $2}' %{_kernelsrcdir}/include/{linux/version,generated/utsrelease}.h 2>/dev/null || awk -F'"' '/UTS_RELEASE/{print $2}' %{_kernelsrcdir}/include/linux/{version,utsrelease}.h 2>/dev/null); \\
-	Z=${Z:-$(awk -F' = ' '/^VERSION/{v=$2} /^PATCHLEVEL/{p=$2} /^SUBLEVEL/{s=$2} /^EXTRAVERSION/{e=$2} END {printf("%d.%d.%d%s", v, p, s, e)}' %{_kernelsrcdir}/Makefile 2>/dev/null)}; \\
-	echo ${Z:-ERROR}; \\
-)}%__kernel_ver
-
-%__kernel_rel	%{expand:%%global __kernel_rel %(Z=$(LC_ALL=C rpm -qf %{_kernelsrcdir}/include/linux/fs.h 2>/dev/null --qf "%{R}" | grep -v "is not"); echo ${Z:-ERROR})}%__kernel_rel
-%__kernel_rpmvr	%{expand:%%global __kernel_rpmvr %(Z=$(LC_ALL=C rpm -qf %{_kernelsrcdir}/include/linux/fs.h 2>/dev/null --qf "%{V}-%{R}" | grep -v "is not"); echo ${Z:-ERROR})}%__kernel_rpmvr
-%_kernel_ver	%{expand:%%global _kernel_ver %{__kernel_ver}%{?with_dist_kernel:%(echo %{__kernel_ver} | grep -q -e - || echo -%{__kernel_rel})}}%_kernel_ver
-%_kernel_ver_str	%{expand:%%global _kernel_ver_str %(echo %{!?_without_dist_kernel:%{__kernel_rpmvr}}%{?_without_dist_kernel:%{__kernel_ver}} | sed -e 's/-/_/g')}%_kernel_ver_str
-
-# `uname -r` to be used in @release field
-%_kernel_vermagic	%{expand:%%global _kernel_vermagic %(echo %{_kernel_ver} | sed -e 's/-/_/g')}%_kernel_vermagic
 
 # sgml macros
 %xmlcat_add()		/usr/bin/xmlcatalog --noout --add nextCatalog \"\" %1 /etc/xml/catalog ;
@@ -516,6 +526,15 @@ CXXFLAGS="%{rpmcxxflags}" \
 				echo ".so $l" > $a; \
 				echo >&2 "Converted ${a#$RPM_BUILD_ROOT} from symlink to man link: $l"; \
 			done; \
+			# verify that .so links point to existing files (not allowed to point to "other package") \
+			# TODO: iterate over all man dirs, but in Th there is only one true man dir \
+			err=$(grep -rl '^\.so ' "$RPM_BUILD_ROOT$i" | while read doc; do \
+				l=$(grep -r '^\.so ' "$doc"); \
+				l=${l#.so }; \
+				d=$(dirname $doc); \
+				test -e $RPM_BUILD_ROOT$i/$l || test -e $d/$(basename $l) || echo "  ${doc#$RPM_BUILD_ROOT} points to inexistent manpage: $l"; \
+			done); \
+			test "$err" != "" && { echo >&2 "Man page link errors:"; echo >&2 "$err"; exit 1; }; \
 			find "$RPM_BUILD_ROOT$i" -type f -size +%{_min_compress_bytes}c -print | xargs -r %{__gzip} -9nf; \
 		fi; \
 	done; \
@@ -602,7 +621,7 @@ if [ -d "$RPM_BUILD_ROOT" ]; then \
 fi; }; __spec_install_post_strip } } }
 
 #-----------------------------------------------------------------
-# remove all RPATH from executable binaries and shared object files
+# remove all RPATH/RUNPATH from executable binaries and shared object files
 #
 # Requires: find, awk, cut, xargs, chrpath, uname
 #
@@ -619,12 +638,12 @@ if [ -d "$RPM_BUILD_ROOT" ]; then \
 		objs=`echo "$files" | xargs -r -d'\\n' file | awk -F: '/ELF.*(executable.*dynamically linked|shared object)/ {print $1}'`; \
 	fi; \
 	if [ -n "$objs" ]; then \
-		printf "Remove RPATH from %d executable binaries and shared object files.\n" $(echo "$objs" | wc -l); \
+		printf "Remove RPATH/RUNPATH from %d executable binaries and shared object files.\n" $(echo "$objs" | wc -l); \
 		echo "$objs" | \
 		while read file; do \
 			rpath= ; \
 			chmod u+w "$file"; \
-			for dir in $(chrpath -l "$file" | awk '/RPATH=/ { gsub(/.*RPATH=/,""); gsub(/:/," "); print $0 }'); do \
+			for dir in $(chrpath -l "$file" | awk '/(R|RUN)PATH=/ { gsub(/.*RPATH=/,""); gsub(/.*RUNPATH=/,""); gsub(/:/," "); print $0 }'); do \
 					case $dir in \
 					'$ORIGIN' ) \
 						if [ "$rpath" = "" ] ; then rpath="$dir" ; \
@@ -650,6 +669,8 @@ if [ -d "$RPM_BUILD_ROOT" ]; then \
 	fi; \
 fi; }; __spec_install_post_chrpath } } }
 
+# vim: "
+
 #-----------------------------------------------------------------
 # Find all shared object files with unresolved symbols. Warn
 # and terminate if any found (termination can be turned off by define).
@@ -672,6 +693,30 @@ __spec_install_post_check_so() { \
 	echo " DONE"; \
 	%{!?no_install_post_check_so:return $fail;} \
 }; __spec_install_post_check_so }}
+
+#-----------------------------------------------------------------
+# Verify that for each directory under /run package contains
+# tmpfiles.d configuration. Warn and terminate build if config is
+# missing.
+#
+#%no_install_post_check_tmpfiles 1
+#
+%__spec_install_post_check_tmpfiles { \
+__spec_install_post_check_tmpfiles() { \
+%{!?debug:set +x;} \
+	fail=0; \
+	echo "Checking /run <-> tmpfiles.d completeness..."; \
+	for d in $RPM_BUILD_ROOT/var/run/*; do \
+		[ -d "$d" ] || continue; \
+		d=${d##$RPM_BUILD_ROOT}; \
+		if ! grep -qsF "$d" $RPM_BUILD_ROOT/usr/lib/tmpfiles.d/*.conf $RPM_BUILD_ROOT/etc/tmpfiles.d/*.conf; then\
+		    echo "No tmpfiles configuration for '$d'";\
+			fail=1 ; \
+		fi \
+	done ; \
+	echo " DONE"; \
+	%{!?no_install_post_check_tmpfiles:return $fail;} \
+}; __spec_install_post_check_tmpfiles }}
 
 #-----------------------------------------------------------------
 # Find and gzip all kernel modules
@@ -750,7 +795,7 @@ fi; \
 #-----------------------------------------------------------------
 # Update icon cache
 # Requires:	hicolor-icon-theme
-# Requires:	gtk+
+# Requires:	/usr/bin/gtk-update-icon-cache 
 #
 %update_icon_cache() {{ \
 	%{!?1:%{error:%{0}: Required theme name missing}} \
@@ -799,9 +844,24 @@ fi; \
 #
 %__noautoreqfiles	%(sed -e s'/#.*//' /etc/rpm/noautoreqfiles)%{?_noautoreqfiles: %{_noautoreqfiles}}
 %__noautoprovfiles	%(sed -e s'/#.*//' /etc/rpm/noautoprovfiles)%{?_noautoprovfiles: %{_noautoprovfiles}}
-%__noautoreq		%(sed -e s'/#.*//' /etc/rpm/noautoreq)%{?_noautoreq: %{_noautoreq}}
 %__noautoreqdep		%(sed -e s'/#.*//' /etc/rpm/noautoreqdep)%{?_noautoreqdep: %{_noautoreqdep}}
 %__noautoprov		%(sed -e s'/#.*//' /etc/rpm/noautoprov)%{?_noautoprov: %{_noautoprov}}
+%__noautoreq		%(sed -e s'/#.*//' /etc/rpm/noautoreq) \
+	%{?_noautoreq: %{_noautoreq}} \
+	%{?_noautoreq_pear: %{__noauto_regexp_helper -p pear %{_noautoreq_pear}}} \
+	%{?_noautoreq_perl: %{__noauto_regexp_helper -p perl %{_noautoreq_perl}}} \
+	%{?_noautoreq_java: %{__noauto_regexp_helper -p java %{_noautoreq_java}}} \
+	%{nil}
+
+# helper for wrapping _noautoreq between perl() or pear()
+# Author: Elan Ruusamäe <glen@pld-linux.org>
+# Usage:
+# BuildRequires:	rpmbuild(macros) >= 1.654
+# %define _noautoreq_pear Excluded.php PEAR/Something.php
+# %define _noautoreq_perl Apache::.*
+# BuildRequires:	rpmbuild(macros) >= 1.672
+# %define _noautoreq_java ClassDataVersion
+%__noauto_regexp_helper(p:) %(echo "%*" | awk 'BEGIN{RS=" "}{printf("%{-p*}\\\\\\(%%s\\\\\\) ", $1)}')
 
 #%_noautocompressdoc	%{nil}
 #
@@ -829,15 +889,24 @@ fi; \
 
 # Ruby
 %__ruby				/usr/bin/ruby
-%ruby_archdir		%{expand:%%global ruby_archdir %(%{__ruby} -r rbconfig -e 'print Config::CONFIG["archdir"]' 2>/dev/null || echo ERROR)}%ruby_archdir
+
+%ruby_archdir		%{expand:%%global ruby_archdir %(%{__ruby} -r rbconfig -e 'print RbConfig::CONFIG["archdir"]' 2>/dev/null || echo ERROR)}%ruby_archdir
+%ruby_libdir		%{expand:%%global ruby_libdir %(%{__ruby} -r rbconfig -e 'print RbConfig::CONFIG["rubylibdir"]' 2>/dev/null || echo ERROR)}%ruby_libdir
 %ruby_ridir			%{expand:%%global ruby_ridir %(%{__ruby} -r rbconfig -e 'include Config; print File.join(CONFIG["datadir"], "ri", CONFIG["ruby_version"], "system")' 2>/dev/null || echo ERROR)}%ruby_ridir
-%ruby_rubylibdir	%{expand:%%global ruby_rubylibdir %(%{__ruby} -r rbconfig -e 'print Config::CONFIG["rubylibdir"]' 2>/dev/null || echo ERROR)}%ruby_rubylibdir
-%ruby_vendorarchdir	%{expand:%%global ruby_vendorarchdir %(%{__ruby} -r rbconfig -e 'print Config::CONFIG["vendorarchdir"]' 2>/dev/null || echo ERROR)}%ruby_vendorarchdir
-%ruby_vendorlibdir	%{expand:%%global ruby_vendorlibdir %(%{__ruby} -r rbconfig -e 'print Config::CONFIG["vendorlibdir"]' 2>/dev/null || echo ERROR)}%ruby_vendorlibdir
-%ruby_sitearchdir	%{expand:%%global ruby_sitearchdir %(%{__ruby} -r rbconfig -e 'print Config::CONFIG["sitearchdir"]' 2>/dev/null || echo ERROR)}%ruby_sitearchdir
-%ruby_sitelibdir	%{expand:%%global ruby_sitelibdir %(%{__ruby} -r rbconfig -e 'print Config::CONFIG["sitelibdir"]' 2>/dev/null || echo ERROR)}%ruby_sitelibdir
+%ruby_rubylibdir	%{expand:%%global ruby_rubylibdir %(%{__ruby} -r rbconfig -e 'print RbConfig::CONFIG["rubylibdir"]' 2>/dev/null || echo ERROR)}%ruby_rubylibdir
+%ruby_vendorarchdir	%{expand:%%global ruby_vendorarchdir %(%{__ruby} -r rbconfig -e 'print RbConfig::CONFIG["vendorarchdir"]' 2>/dev/null || echo ERROR)}%ruby_vendorarchdir
+%ruby_vendorlibdir	%{expand:%%global ruby_vendorlibdir %(%{__ruby} -r rbconfig -e 'print RbConfig::CONFIG["vendorlibdir"]' 2>/dev/null || echo ERROR)}%ruby_vendorlibdir
+%ruby_sitearchdir	%{expand:%%global ruby_sitearchdir %(%{__ruby} -r rbconfig -e 'print RbConfig::CONFIG["sitearchdir"]' 2>/dev/null || echo ERROR)}%ruby_sitearchdir
+%ruby_sitedir		%{expand:%%global ruby_sitedir %(%{__ruby} -r rbconfig -e 'print RbConfig::CONFIG["sitedir"]' 2>/dev/null || echo ERROR)}%ruby_sitedir
+%ruby_sitelibdir	%{expand:%%global ruby_sitelibdir %(%{__ruby} -r rbconfig -e 'print RbConfig::CONFIG["sitelibdir"]' 2>/dev/null || echo ERROR)}%ruby_sitelibdir
 %ruby_rdocdir		/usr/share/rdoc
-%ruby_version		%{expand:%%global ruby_version %(%{__ruby} -r rbconfig -e 'print Config::CONFIG["ruby_version"]' 2>/dev/null || echo ERROR)}%ruby_version
+%ruby_vendordir		%{expand:%%global ruby_vendordir %(%{__ruby} -r rbconfig -e 'print RbConfig::CONFIG["vendordir"]' 2>/dev/null || echo ERROR)}%ruby_vendordir
+%ruby_version		%{expand:%%global ruby_version %(%{__ruby} -r rbconfig -e 'print RbConfig::CONFIG["ruby_version"]' 2>/dev/null || echo ERROR)}%ruby_version
+
+%ruby_gemdir		%{expand:%%global ruby_gemdir %(%{__ruby} -r rbconfig -e 'print RbConfig::CONFIG["rubylibdir"].sub(RbConfig::CONFIG["ruby_version"], "gems/#{RbConfig::CONFIG["ruby_version"]}")' 2>/dev/null || echo ERROR)}%{ruby_gemdir}
+%ruby_specdir		%{ruby_gemdir}/specifications
+
+# deprecated, similar functionality autogenerated with rpm5
 %ruby_ver_requires_eq	Requires:	ruby(ver) = %ruby_version
 %ruby_mod_ver_requires_eq	Requires:	ruby-modules(ver) = %ruby_version
 
@@ -859,21 +928,30 @@ fi; \
 # "_ts" if ZTS enabled, empty otherwise
 %zend_zts				%{expand:%%global _zend_zts_%{?_zend_zts} 1}%{?_zend_zts_1:_ts}
 
+# name of php package
+%php_name				php%{?php_suffix}
+# use rpmbuild -D 'php_suffix 54' to build php extension for php 5.4
+# NOTE: error output must be empty. otherwise can't build pecl packages if no php*-devel is installed
+%php_suffix				%{expand:%%global php_suffix %(c=$(php-config --sysconfdir 2>/dev/null) || echo '' && echo ${c#/etc/php})%%{nil}}%php_suffix
+
+# php cli. version that php headers are installed for
+%__php					/usr/bin/%{php_name}
+
 # helper macro
-%__php_api_requires(v:) Requires: php%{-v*}(%{expand:%1}) = %{expand:%{%{!?2:%{1}}%{?2}}}
+%__php_api_requires(v:) Requires: %{php_name}(%{expand:%1}) = %{expand:%{%{!?2:%{1}}%{?2}}}
 
 # macros for public use
 # for php extensions (php-pecl)
 %requires_php_extension %{__php_api_requires modules_api php_api_version} \
 %{__php_api_requires zend_module_api} \
-%{__php_api_requires -v %php_major_version debug php_debug} \
-%{__php_api_requires -v %php_major_version thread-safety _zend_zts}
+%{__php_api_requires debug php_debug} \
+%{__php_api_requires thread-safety _zend_zts}
 
 # for zend extensions
 %requires_zend_extension %{__php_api_requires zend_module_api} \
 %{__php_api_requires zend_extension_api} \
-%{__php_api_requires -v %php_major_version debug php_debug} \
-%{__php_api_requires -v %php_major_version thread-safety _zend_zts}
+%{__php_api_requires debug php_debug} \
+%{__php_api_requires thread-safety _zend_zts}
 
 # for php pdo modules (php-pecl-PDO_*)
 %requires_php_pdo_module %{__php_api_requires PDO_API php_pdo_api_version}
@@ -887,9 +965,6 @@ if [ -x /etc/rc.d/init.d/php-fcgi ]; then \
 	if [[ ${PHP_FCGI_BINARY:-php.fcgi} = *php.fcgi* ]]; then \
 		%service -q php-fcgi restart \
 	fi \
-fi \
-if [ -x /etc/rc.d/init.d/php-fpm ]; then \
-	%service -q php-fpm restart \
 fi \
 %{nil}
 
@@ -914,6 +989,7 @@ fi \
 %xorg_xserver_font_abi		%{expand:%%global xorg_xserver_font_abi %(awk '/#define ABI_FONT_VERSION/ { split($0,A,/[(,)]/); printf("%d.%d",A[2], A[3]); }' /usr/include/xorg/xf86Module.h 2> /dev/null | echo ERROR)}%xorg_xserver_font_abi
 %xorg_xserver_videodrv_abi	%{expand:%%global xorg_xserver_videodrv_abi %(awk '/#define ABI_VIDEODRV_VERSION/ { split($0,A,/[(,)]/); printf("%d.%d",A[2], A[3]); }' /usr/include/xorg/xf86Module.h 2> /dev/null || echo ERROR)}%xorg_xserver_videodrv_abi
 %xorg_xserver_xinput_abi	%{expand:%%global xorg_xserver_xinput_abi %(awk '/#define ABI_XINPUT_VERSION/ { split($0,A,/[(,)]/); printf("%d.%d",A[2], A[3]); }' /usr/include/xorg/xf86Module.h 2> /dev/null || echo ERROR)}%xorg_xserver_xinput_abi
+# vim: '
 
 %requires_xorg_xserver_extension \
 %{__xorg_abi_requires_ge ansic xorg_xserver_ansic_abi} \
@@ -986,13 +1062,24 @@ fi \
 %py3_comp		%{__python3} -c "import compileall; import sys; compileall.compile_dir(sys.argv[1], ddir=sys.argv[1][len('$RPM_BUILD_ROOT'):])"
 %py3_ocomp		%{__python3} -O -c "import compileall; import sys; compileall.compile_dir(sys.argv[1], ddir=sys.argv[1][len('$RPM_BUILD_ROOT'):])"
 
+# node.js libdir
+# Requirements:
+# BuildRequires: rpmbuild(macros) >= 1.634
+%nodejs_libdir		/usr/lib/node_modules
+
+# bash-completion 2.0 completions dir
+# Requirements:
+# BuildRequires: rpmbuild(macros) >= 1.673
+# Requires:	bash-completion >= 2.0
+%bash_compdir		/usr/share/bash-completion/completions
+
 # Hardlink binary identical .pyc and .pyo files
 %__spec_install_post_py_hardlink {\
 %{!?no_install_post_py_hardlink: __spec_install_post_py_hardlink() { \
 %{!?debug:set +x;} \
-local a b c=0 t=0; \
+local a b c=0 t=0 pyc=%{tmpdir}/%{name}-%{version}-%{release}__rpm_pyc; \
 if [ -d "$RPM_BUILD_ROOT" ]; then \
-	find "$RPM_BUILD_ROOT" -name '*.pyc' > __rpm_pyc; \
+	find "$RPM_BUILD_ROOT" -name '*.pyc' > $pyc; \
 	while read a; do \
 		b="${a%.pyc}.pyo"; \
 		if cmp -s "$a" "$b"; then \
@@ -1000,16 +1087,25 @@ if [ -d "$RPM_BUILD_ROOT" ]; then \
 			c=$((c + 1)); \
 		fi; \
 		t=$((t + 1)); \
-	done < __rpm_pyc; \
+	done < $pyc; \
 	[ $t -gt 0 ] && printf "Hardlink Python files: %d/%d files hardlinked\n" $c $t; \
-	rm -f __rpm_pyc; \
+	rm -f $pyc; \
 fi; \
 }; __spec_install_post_py_hardlink } }
 
-# remove python sources, so that check-files won't complain
-%py_postclean() \
+# Remove Python 2.x sources,
+# Package only compiled .py[co] for Python 2.x libraries.
+# Author: Elan Ruusamäe <glen@pld-linux.org>
+#
+# Usage:
+# %py_postclean /usr/share/extra -x keepme.py,keeptoo.py
+# Options:
+# -x - comma separated of file basenames to preserve
+# ARGS - extra directories to clean for .py sources
+#
+%py_postclean(x:) \
 for d in %{py_sitescriptdir} %{py_sitedir} %*; do \
- [ ! -d "$RPM_BUILD_ROOT$d" ] || find "$RPM_BUILD_ROOT$d" -name '*.py' -print0 | xargs -0r -l512 rm;\
+	[ ! -d "$RPM_BUILD_ROOT$d" ] || find "$RPM_BUILD_ROOT$d" -name '*.py' -print0 %{-x:| grep -ZzvE '/(%(echo '%{-x*}' | tr ',' '|'))$'} | xargs -0r -l512 rm;\
 done \
 %{nil}
 
@@ -1027,6 +1123,7 @@ else \
 fi; \
 }
 
+%_host_base_arch	%{expand:%%global _host_base_arch %(echo %{_host_cpu} | sed 's/i.86/i386/;s/athlon/i386/;s/pentium./i386/;s/amd64/x86_64/;s/ia32e/x86_64/;s/arm.*/arm/')}%_host_base_arch
 %_target_base_arch	%{expand:%%global _target_base_arch %(echo %{_target_cpu} | sed 's/i.86/i386/;s/athlon/i386/;s/pentium./i386/;s/amd64/x86_64/;s/ia32e/x86_64/')}%_target_base_arch
 
 # user/group checking macros
@@ -1134,6 +1231,7 @@ else \
 		%{expand:%{%{#}}} 1>&2 || exit $? \
 	[ ! -x /usr/sbin/nscd ] || /usr/sbin/nscd -i passwd || : \
 fi;
+# vim: "
 
 # Usage:
 #   %groupadd [-P package] [-g gid] group
@@ -1484,6 +1582,7 @@ fi \
 f = io.open("%{_docdir}/%{name}-%{version}/optional-packages.txt", "r") \
 if f then \
 	for l in f:lines() do print(l); end \
+	f:close() \
 end \
 %{nil}
 
@@ -1569,17 +1668,17 @@ done \
 %build_kernel_modules(p:P:m:C:c)									\
 %{!?-m:%{error:%{0}: Required module name/list missing} exit 1}		\
 																	\
-%define Opts 														\\\\\\\
-%if "%{_target_base_arch}" != "%{_arch}"							\\\
-	%if "%{_arch}" == "x86_64" && "%{_target_base_arch}" == "i386"	\\\
-	CC="%{kgcc}" ARCH=%{_target_base_arch}							\\\
+%define Opts														\\\\\\\
+%if "%{_target_base_arch}" != "%{_host_base_arch}"					\\\
+	%if "%{_host_base_arch}" == "x86_64" && "%{_target_base_arch}" == "i386" \\\
+	CC="%{__cc}" ARCH=%{_target_base_arch}							\\\
 	%else															\\\
 	ARCH=%{_target_base_arch} CROSS_COMPILE=%{_target_cpu}-pld-linux- \\\
 	%endif															\\\
 %else																\\\
-	CC="%{kgcc}" 													\\\
+	CC="%{__cc}"													\\\
 %endif																\
-%define	MakeOpts HOSTCC="%{kgcc}" SYSSRC=%{_kernelsrcdir} SYSOUT=$PWD/o \\\\\\\
+%define	MakeOpts HOSTCC="%{__cc}" SYSSRC=%{_kernelsrcdir} SYSOUT=$PWD/o \\\\\\\
 		O=$PWD/o %{?with_verbose:V=1} %{Opts}						\
 																	\
 %{?-C:cd %{-C*}}													\
@@ -1595,7 +1694,7 @@ compile() {															\
 	ln -sf %{_kernelsrcdir}/Module.symvers o/Module.symvers			\
 	if [ -f %{_kernelsrcdir}/include/generated/autoconf.h ]; then	\
 		ln -sf %{_kernelsrcdir}/include/generated/autoconf.h o/include/generated/autoconf.h \
-		ln -s ../generated/autoconf.h o/include/linux/autoconf.h 	\
+		ln -s ../generated/autoconf.h o/include/linux/autoconf.h	\
 	else															\
 		ln -sf %{_kernelsrcdir}/include/linux/autoconf.h o/include/linux/autoconf.h \
 	fi																\
@@ -1672,7 +1771,11 @@ for cfg in ${cfgs:-dist}; do                                        \
 done																\
 %{?-C:cd -}															\
 }																	\
-compile %{*}\
+if [ -r "%{_kernelsrcdir}/.config" ]; then	\
+	compile %{*}							\
+else										\
+	compile_old %{*}						\
+fi											\
 %{nil}
 
 
@@ -1691,28 +1794,33 @@ compile %{*}\
 #		with same name exists in kernel already
 #  -n <file> -- name of modprobe config file to use (without .conf extension)
 #		for defining aliases, only useful with -s
+#  -D <directory> -- DESTDIR, base directory for installed files,
+#		defaults to RPM_BUILD_ROOT
 
-%install_kernel_modules(m:d:s:n:)									\
+%install_kernel_modules(m:d:s:n:D:)									\
 %{!?-m:%{error:%{0}: Required module name (-m) missing}exit 1}		\
 %{!?-d:%{error:%{0}: Required module directory missing}exit 1}		\
 %{?-n:%{!?-s:%{error:%{0}: Modprobe .conf file requires module suffix}exit 1}} \
 																	\
-%define KernelD $RPM_BUILD_ROOT/usr/lib/modules/%{_kernel_ver}			\
-%define ModprobeD $RPM_BUILD_ROOT%{_sysconfdir}/modprobe.d/%{_kernel_ver} \
+INSTALLROOT=%{-D*}													\
+[ -n "$INSTALLROOT" ] || INSTALLROOT=$RPM_BUILD_ROOT				\
+																	\
+%define KernelD $INSTALLROOT/usr/lib/modules/%{_kernel_ver}				\
+%define ModprobeD $INSTALLROOT%{_sysconfdir}/modprobe.d/%{_kernel_ver} \
 																	\
 __install_kernel_modules() {										\
-%{!?debug:set +x;} \
+%{!?debug:set +x;}													\
 																	\
 for MODULE in {%{-m*},}; do											\
 	[ -n "${MODULE}" ] || continue									\
-	MNAME=${MODULE##*/}											\
-	install -D ${MODULE}.ko %{KernelD}/%{-d*}/${MNAME}%{-s:-%{-s*}}.ko	\
-	%{?-s:install -d %{ModprobeD}							\
+	MNAME=${MODULE##*/}												\
+	install -m 644 -D ${MODULE}.ko %{KernelD}/%{-d*}/${MNAME}%{-s:-%{-s*}}.ko	\
+	%{?-s:install -d %{ModprobeD}									\
 		echo "alias ${MNAME} ${MNAME}-%{-s*}" >> %{ModprobeD}/%{-n*}.conf}	\
 done																\
 }																	\
 __install_kernel_modules_old() {									\
-%{!?debug:set +x;} \
+%{!?debug:set +x;}													\
 local cfgs='%{?with_dist_kernel:%{?with_smp: smp}%{?with_up: up}}%{!?with_dist_kernel: nondist}' \
 																	\
 for MODULE in {%{-m*},}; do											\
@@ -1720,7 +1828,7 @@ for MODULE in {%{-m*},}; do											\
 	for cfg in ${cfgs:-dist}; do                                    \
 		[ "$cfg" = smp ] && suf=smp || suf=							\
 		MNAME=${MODULE##*/}											\
-		install -D ${MODULE}-$cfg.ko								\\\
+		install -m 644 -D ${MODULE}-$cfg.ko							\\\
 			%{KernelD}$suf/%{-d*}/${MNAME}%{-s:-%{-s*}}.ko			\
 		%{?-s:install -d %{ModprobeD}$suf							\
 			echo "alias ${MNAME} ${MNAME}-%{-s*}"					\\\
@@ -1728,11 +1836,12 @@ for MODULE in {%{-m*},}; do											\
 	done															\
 done																\
 }																	\
-if [ -r "%{_kernelsrcdir}/.config" ]; then	\
-	__install_kernel_modules				\
-else										\
-	__install_kernel_modules_old			\
-fi											\
+if [ -r "%{_kernelsrcdir}/.config" ]; then							\
+	__install_kernel_modules										\
+else																\
+	__install_kernel_modules_old									\
+fi																	\
+unset INSTALLROOT													\
 %{nil}
 
 # patchset macros
@@ -1860,7 +1969,11 @@ s=""\
 for _, l in pairs(t) do\
 	s=s..l.."\\n"\
 end\
-io.open("/etc/shells", "w"):write(s)\
+f = io.open("/etc/shells", "w")\
+if f then\
+	f:write(s)\
+	f:close()\
+end\
 %{nil}
 
 # Backwards compat. Use of %lua_ prefixed macros is preferred as these are cleaner to read.
@@ -1952,17 +2065,127 @@ else: \
 #
 # Requirements:
 # BuildRequires:	sed >= 4.0
-# BuildRequires:	rpmbuild(macros) >= 1.565
 
 # NB: make sure this macro stays on one line
 # NB: make sure it includes newline escape
-%undos(f:i)	%{-f:%{__find} -regextype posix-extended -%{-i:i}regex '^.+\\.(%(echo %{-f*} | tr ',' '|'))$' -print0 | xargs -0} %{__sed} -i -e 's,\\r$,,' %* \
+%undos(f:i)	%{-f:%{__find} -type f -regextype posix-extended -%{-i:i}regex '^.+\\.(%(echo %{-f*} | tr ',' '|'))$' -print0 | xargs -0} %{__sed} -i -e 's,\\r$,,' %* \
 %{nil}
+
+# Hook to register nagios object based plugins in Nagios NRPE daemon config.
+#
+# Author: Elan Ruusamäe <glen@pld-linux.org>
+#
+# Usage:
+#  -a NAME  -- add command named NAME
+#  -d NAME  -- remove command named NAME
+#  -f FILE  -- specify plugin configuration FILE to extract command definition from
+#
+# Sample:
+# %triggerin -- nagios-nrpe
+# %nagios_nrpe -a %{plugin} -f %{_sysconfdir}/%{plugin}.cfg
+#
+# %triggerun -- nagios-nrpe
+# %nagios_nrpe -d %{plugin} -f %{_sysconfdir}/%{plugin}.cfg
+#
+# Requirements:
+# Requires:			grep
+# Requires:			sed >= 4.0
+# BuildRequires:	rpmbuild(macros) >= 1.552
+%nagios_nrpe(a:d:c:f:) {\
+	m=$(md5sum < /etc/nagios/nrpe.cfg); \
+	%{-a:# on -a and config exists \
+	if [ -f /etc/nagios/nrpe.cfg ]; then \
+		if ! %{__grep} -q '^command\[%{-a*}\]' /etc/nagios/nrpe.cfg; then \
+				%{__sed} -ne 's/^[ \t]*command_line[ \t]\+\(.\+\)/command[%{-a*}]=\1/p' %{-f*} >> /etc/nagios/nrpe.cfg; \
+		fi; \
+	fi;} \
+	%{-d:# on package remove, -d and config exists \
+	if [ "$1" = "0" -a -f /etc/nagios/nrpe.cfg ]; then \
+		%{__sed} -i -e '/^[ \t]*command\[%{-d*}\]/d' /etc/nagios/nrpe.cfg; \
+	fi;} \
+	if [ "$m" != "$(md5sum < /etc/nagios/nrpe.cfg)" ]; then \
+		%service -q nrpe restart; \
+	fi; \
+}%{nil}
+
+# Import or update Cacti template.
+#
+# Author: Elan Ruusamäe <glen@pld-linux.org>
+#
+# Usage:
+# %cacti_import_template XMLFILE
+#  XMLFILE -- XML template to import
+#
+# Sample:
+# %post
+# %cacti_import_template %{resourcedir}/cacti_host_template_varnish.xml
+#
+# Requires:	cacti >= 0.8.7e-8
+# BuildRequires:	rpmbuild(macros) >= 1.630
+# Note: 1.1 (cacti-0.8.7h) adds requirement for --with-template-rras or --with-user-rras option
+
+%cacti_import_template() {\
+v=$(%{__sed} -rne 's/.+Add Graphs Script ([0-9\.]+).+/\1/p' /usr/share/cacti/cli/import_template.php); \
+if [ "$v" != "1.0" ]; then \
+	rra="--with-template-rras"; \
+fi; \
+/usr/share/cacti/cli/import_template.php --filename=%1 $rra || :; \
+}%{nil}
+
+# pre/post script for -upstart subpackages
+#
+# Author: Jacek Konieczny <jajcus@jajcus.net>
+#
+# Usage:
+#	%upstart_post service_name
+#   %upstart_postun service_name
+#
+# Sample:
+# %post upstart
+# %upstart_post %{name}
+#
+# %postun upstart
+# %upstart_postun %{name}
+#
+# Requirements:
+# BuildRequires:	rpmbuild(macros) >= 1.560
+# Requires:			rc-scripts >= 0.4.3
+
+# migrate from init script to upstart job
+%upstart_post() \
+	if [ -f /var/lock/subsys/%1 ]; then \
+		/sbin/service --no-upstart %1 stop \
+		/sbin/service %1 start \
+	fi
+
+# restart the job after upgrade or migrate to init script on removal
+# cannot be stopped with 'service' as /etc/init/$name.conf may be missing
+# at this point
+%upstart_postun() \
+	if [ -x /sbin/initctl ] && /sbin/initctl status %1 2>/dev/null | grep -q 'running' ; then \
+		/sbin/initctl stop %1 >/dev/null 2>&1 \
+		[ -f /etc/rc.d/init.d/%1 -o -f /etc/init/%1.conf ] && { echo -n "Re-"; /sbin/service %1 start; }; \
+	fi
+
+# Haskell Macros
+# BuildRequires:  rpmbuild(macros) >= 1.608
+%ghcdir		ghc-%(/usr/bin/ghc --numeric-version 2>/dev/null || echo ERROR)
+
+# update /usr/lib*/ghc-*/package.conf.d/package.cache
+# Requires: ghc
+# BuildRequires:  rpmbuild(macros) >= 1.607
+#
+%ghc_pkg_recache() {{ \
+	umask 022; \
+	[ ! -x /usr/bin/ghc-pkg ] || /usr/bin/ghc-pkg recache; \
+};} \
+%{nil}
+
 
 # pre/post script for packages supporting systemd units
 #
 # Author: Bartlomiej Zimon <uzi18@o2.pl>
-#	  Jan Rękorajski <baggins@mimuw.edu.pl>
+#		  Jan Rękorajski <baggins@mimuw.edu.pl>
 #
 # Usage:
 #
